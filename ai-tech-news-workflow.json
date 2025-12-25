@@ -1,0 +1,139 @@
+{
+  "name": "AI & Tech News Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [-64, 16],
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://aibusiness.com/rss.xml"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [240, -48],
+      "id": "ai-rss",
+      "name": "AI News RSS Feed"
+    },
+    {
+      "parameters": {
+        "url": "https://techcrunch.com/feed/"
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [256, 160],
+      "id": "tech-rss",
+      "name": "Tech News RSS Feed"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [448, 32],
+      "id": "merge-feeds",
+      "name": "Merge Feeds"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData"
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [688, 32],
+      "id": "aggregate-news",
+      "name": "Aggregate News"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.data }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI newsletter assistant creating a daily intelligence report from multiple categories.\n\nUse only the provided items. Do not invent content.\n\nOrganize the content as follows:\n\nHi there,\nHere's your Tech Brief:\n\nAI NEWS HIGHLIGHTS\n======================\nFor each AI-related item:\nHEADLINE IN ALL CAPS\n1–2 sentence summary.\nLink: <article link>\n\nTECHNOLOGY UPDATES\n======================\nFor each technology-related item:\nHEADLINE IN ALL CAPS\n1–2 sentence summary.\nLink: <article link>\n\nIf a section has no relevant items, state that clearly.\n\nSign off as \"Your AI Intelligence Team\"."
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1,
+      "position": [864, 32],
+      "id": "llm-chain",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [992, 256],
+      "id": "gemini-model",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_CREDENTIAL_ID",
+          "name": "Google Gemini API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "Daily AI & Tech News Digest",
+        "emailType": "text",
+        "message": "={{ $json.text }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [1184, 32],
+      "id": "gmail-send",
+      "name": "Send Email",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_OAUTH_ID",
+          "name": "Gmail OAuth Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "AI News RSS Feed", "type": "main", "index": 0 },
+          { "node": "Tech News RSS Feed", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "AI News RSS Feed": {
+      "main": [[{ "node": "Merge Feeds", "type": "main", "index": 0 }]]
+    },
+    "Tech News RSS Feed": {
+      "main": [[{ "node": "Merge Feeds", "type": "main", "index": 1 }]]
+    },
+    "Merge Feeds": {
+      "main": [[{ "node": "Aggregate News", "type": "main", "index": 0 }]]
+    },
+    "Aggregate News": {
+      "main": [[{ "node": "Basic LLM Chain", "type": "main", "index": 0 }]]
+    },
+    "Basic LLM Chain": {
+      "main": [[{ "node": "Send Email", "type": "main", "index": 0 }]]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [[{ "node": "Basic LLM Chain", "type": "ai_languageModel", "index": 0 }]]
+    }
+  },
+  "active": false
+}
